@@ -51,21 +51,27 @@ def get_current_user_id(
                 break
 
         if not rsa_key:
+            import logging
+            logging.error(f"No matching RSA key found for kid: {kid}")
             raise credentials_exception
 
         payload = jwt.decode(
             token,
             rsa_key,
-            algorithms=["RS256"],
+            algorithms=["RS256", "ES256", "HS256"],
             audience="authenticated",
             options={"verify_exp": True},
         )
 
         user_id: str | None = payload.get("sub")
         if user_id is None:
+            import logging
+            logging.error("No 'sub' claim (user_id) found in payload")
             raise credentials_exception
 
         return user_id
 
-    except JWTError:
+    except JWTError as e:
+        import logging
+        logging.error(f"JWT Verification Error: {e}, Header: {jwt.get_unverified_header(token)}")
         raise credentials_exception

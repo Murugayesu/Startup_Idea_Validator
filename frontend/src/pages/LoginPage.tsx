@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../hooks/useAuth'
@@ -7,10 +7,44 @@ import '../styles/LoginPage.css'
 export default function LoginPage() {
   const { session } = useAuthStore()
   const navigate = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (session) navigate('/validate')
   }, [session, navigate])
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        })
+        if (error) throw error
+        // If email confirmation is disabled, user is logged in automatically.
+        // Otherwise, they need to check their email.
+        setError('Signup successful! If you are not redirected, check your email for a confirmation link.')
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (error) throw error
+      }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const signInWithGitHub = () =>
     supabase.auth.signInWithOAuth({
@@ -54,6 +88,50 @@ export default function LoginPage() {
         </div>
 
         <div className="login-buttons">
+          <form onSubmit={handleAuth} className="auth-form">
+            <input
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="auth-input"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="auth-input"
+            />
+            
+            {error && <div className="auth-error">{error}</div>}
+            
+            <button
+              type="submit"
+              disabled={loading}
+              className="auth-submit-btn"
+            >
+              {loading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Sign In'}
+            </button>
+            
+            <button
+              type="button"
+              className="auth-toggle-btn"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError(null);
+              }}
+            >
+              {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+            </button>
+          </form>
+
+          <div className="auth-divider">
+            <span>or continue with</span>
+          </div>
+
           <button
             className="oauth-btn github-btn"
             onClick={signInWithGitHub}
