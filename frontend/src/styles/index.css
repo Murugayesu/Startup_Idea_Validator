@@ -7,15 +7,58 @@
 
 /* ── CSS Custom Properties ─────────────────────────────── */
 :root {
-  /* Color palette */
+  /* Light Theme Palette */
+  --bg-base:       #fafafa;
+  --bg-surface:    #f0f0f5;
+  --bg-elevated:   #ffffff;
+  --bg-card:       #ffffff;
+  --bg-card-hover: #f9f9fb;
+  --bg-nav:        rgba(255, 255, 255, 0.85);
+
+  --border:        rgba(0,0,0,0.08);
+  --border-focus:  rgba(139,92,246,0.6);
+
+  --shadow-sm:     0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md:     0 8px 24px rgba(0,0,0,0.06);
+  --shadow-glow:   0 0 20px rgba(139,92,246,0.15);
+
+  --accent:        #8b5cf6;
+  --accent-light:  #7c3aed; /* slightly darker for better contrast in light mode */
+  --accent-glow:   rgba(139,92,246,0.25);
+  --accent-soft:   rgba(139,92,246,0.12);
+
+  --text-primary:  #111118;
+  --text-secondary:#4a4a5e;
+  --text-muted:    #71718a;
+
+  --green:         #16a34a;
+  --green-soft:    rgba(34,197,94,0.15);
+  --amber:         #d97706;
+  --amber-soft:    rgba(245,158,11,0.15);
+  --red:           #dc2626;
+  --red-soft:      rgba(239,68,68,0.15);
+
+  /* Score colors */
+  --score-high:    #16a34a;
+  --score-mid:     #d97706;
+  --score-low:     #dc2626;
+}
+
+[data-theme='dark'] {
+  /* Dark Theme Palette (Original) */
   --bg-base:       #0a0a0f;
   --bg-surface:    #111118;
   --bg-elevated:   #18181f;
   --bg-card:       #1e1e28;
   --bg-card-hover: #252532;
+  --bg-nav:        rgba(10, 10, 15, 0.85);
 
   --border:        rgba(255,255,255,0.08);
   --border-focus:  rgba(139,92,246,0.6);
+
+  --shadow-sm:     0 4px 12px rgba(0,0,0,0.3);
+  --shadow-md:     0 12px 32px rgba(0,0,0,0.4);
+  --shadow-glow:   0 0 24px rgba(139,92,246,0.25);
 
   --accent:        #8b5cf6;
   --accent-light:  #a78bfa;
@@ -37,6 +80,9 @@
   --score-high:    #22c55e;
   --score-mid:     #f59e0b;
   --score-low:     #ef4444;
+}
+
+:root {
 
   /* Typography */
   --font-sans:   'Inter', system-ui, sans-serif;
@@ -112,12 +158,15 @@ input, textarea { font-family: inherit; }
   align-items: center;
   gap: 24px;
   padding: 0 24px;
-  background: rgba(10,10,15,0.8);
-  backdrop-filter: blur(12px);
+  background: var(--bg-nav);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   position: sticky;
   top: 0;
   z-index: 100;
+  transition: background var(--dur), box-shadow var(--dur);
 }
 
 .navbar-brand {
@@ -175,6 +224,20 @@ input, textarea { font-family: inherit; }
   transition: color var(--dur), background var(--dur);
 }
 .signout-btn:hover { color: var(--text-primary); background: var(--bg-elevated); }
+
+.theme-toggle-btn {
+  font-size: 1.2rem;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  transition: all var(--dur) cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-toggle-btn:hover { 
+  background: var(--bg-elevated); 
+  transform: scale(1.1) rotate(5deg);
+}
 
 /* ── Status badges ──────────────────────────────────────── */
 .status-badge {

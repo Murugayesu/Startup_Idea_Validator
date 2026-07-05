@@ -4,6 +4,10 @@ import LoginPage from './pages/LoginPage'
 import ValidatePage from './pages/ValidatePage'
 import RunPage from './pages/RunPage'
 import HistoryPage from './pages/HistoryPage'
+import LandingPage from './pages/LandingPage'
+import AgentsPage from './pages/AgentsPage'
+import AboutPage from './pages/AboutPage'
+import { useTheme } from './hooks/useTheme'
 import './styles/App.css'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -15,6 +19,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 function NavBar() {
   const { user, signOut } = useAuthStore()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
@@ -22,11 +27,9 @@ function NavBar() {
     navigate('/login')
   }
 
-  if (!user) return null
-
   return (
     <nav className="navbar">
-      <div className="navbar-brand">
+      <div className="navbar-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
         <span className="nav-logo">⚡</span>
         <span className="nav-name">IdeaValidator</span>
       </div>
@@ -34,17 +37,34 @@ function NavBar() {
         <NavLink to="/validate" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'} id="nav-validate">
           Validate
         </NavLink>
-        <NavLink to="/history" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'} id="nav-history">
-          My Runs
+        {user && (
+          <NavLink to="/history" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'} id="nav-history">
+            My Runs
+          </NavLink>
+        )}
+        <NavLink to="/agents" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'} id="nav-agents">
+          Agents
+        </NavLink>
+        <NavLink to="/about" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'} id="nav-about">
+          About
         </NavLink>
       </div>
       <div className="navbar-user">
-        <img
-          src={user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`}
-          alt="avatar"
-          className="user-avatar"
-        />
-        <button className="signout-btn" onClick={handleSignOut} id="signout-btn">Sign out</button>
+        <button onClick={toggleTheme} className="theme-toggle-btn" aria-label="Toggle theme">
+          {theme === 'light' ? '🌙' : '☀️'}
+        </button>
+        {user ? (
+          <>
+            <img
+              src={user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`}
+              alt="avatar"
+              className="user-avatar"
+            />
+            <button className="signout-btn" onClick={handleSignOut} id="signout-btn">Sign out</button>
+          </>
+        ) : (
+          <button className="signout-btn" onClick={() => navigate('/login')} id="signin-btn">Sign In</button>
+        )}
       </div>
     </nav>
   )
@@ -56,11 +76,14 @@ function AppRoutes() {
       <NavBar />
       <main className="app-main">
         <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/agents" element={<AgentsPage />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/validate" element={<RequireAuth><ValidatePage /></RequireAuth>} />
           <Route path="/run/:runId" element={<RequireAuth><RunPage /></RequireAuth>} />
           <Route path="/history" element={<RequireAuth><HistoryPage /></RequireAuth>} />
-          <Route path="*" element={<Navigate to="/validate" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </>
