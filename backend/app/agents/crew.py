@@ -64,7 +64,7 @@ def _groq_safe_completion(*args, **kwargs):
 litellm.completion = _groq_safe_completion
 
 
-def build_crew(startup_idea: str, step_callback=None) -> Crew:
+def build_crew(startup_idea: str, make_step_callback_fn=None, emit_event_fn=None) -> Crew:
     settings = get_settings()
 
     # ------------------------------------------------------------------
@@ -106,6 +106,7 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
         verbose=True,
         allow_delegation=False,
         max_iter=4,             # Reduced from 5 to cap token budget
+        step_callback=make_step_callback_fn("Market Research Analyst") if make_step_callback_fn else None,
     )
 
     tech_analyst = Agent(
@@ -125,6 +126,7 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
         verbose=True,
         allow_delegation=False,
         max_iter=3,             # Reduced from 4 to cap token budget
+        step_callback=make_step_callback_fn("Technical Feasibility Analyst") if make_step_callback_fn else None,
     )
 
     business_strategist = Agent(
@@ -144,6 +146,7 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
         verbose=True,
         allow_delegation=False,
         max_iter=4,
+        step_callback=make_step_callback_fn("Business Strategy Analyst") if make_step_callback_fn else None,
     )
 
     report_compiler = Agent(
@@ -165,6 +168,7 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
         verbose=True,
         allow_delegation=False,
         max_iter=3,
+        step_callback=make_step_callback_fn("Validation Report Compiler") if make_step_callback_fn else None,
     )
 
     # ------------------------------------------------------------------
@@ -187,6 +191,7 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
             "3–5 competitors with brief descriptions, and 2–3 key market trends."
         ),
         agent=market_researcher,
+        callback=lambda t: emit_event_fn("Technical Feasibility Analyst", "started", "Technical Feasibility Analyst starting...") if emit_event_fn else None,
     )
 
     tech_analysis_task = Task(
@@ -206,6 +211,7 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
             "existing tools/APIs that can be leveraged, and an overall feasibility rating."
         ),
         agent=tech_analyst,
+        callback=lambda t: emit_event_fn("Business Strategy Analyst", "started", "Business Strategy Analyst starting...") if emit_event_fn else None,
     )
 
     swot_task = Task(
@@ -230,6 +236,7 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
         ),
         agent=business_strategist,
         context=[market_research_task],
+        callback=lambda t: emit_event_fn("Validation Report Compiler", "started", "Validation Report Compiler starting...") if emit_event_fn else None,
     )
 
     report_task = Task(
@@ -274,7 +281,6 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
         tasks=[market_research_task, tech_analysis_task, swot_task, report_task],
         process=Process.sequential,
         verbose=True,
-        step_callback=step_callback,
     )
 
     return crew

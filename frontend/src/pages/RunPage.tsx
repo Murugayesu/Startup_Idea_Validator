@@ -18,6 +18,60 @@ interface RunData {
   created_at: string
 }
 
+// ── Error helpers ────────────────────────────────────────────────────────────
+function extractFriendlyError(raw: string | null): { title: string; detail: string | null } {
+  if (!raw) return { title: 'An unexpected error occurred.', detail: null }
+
+  // Try to pull the innermost Groq/litellm "message" value from JSON
+  const jsonMsgMatch = raw.match(/"message"\s*:\s*"([^"]+)"/) 
+  if (jsonMsgMatch) {
+    const msg = jsonMsgMatch[1]
+    // Strip out the "failed_generation" spill if present
+    const clean = msg.replace(/\\n.*$/, '').trim()
+    return { title: clean, detail: raw }
+  }
+
+  // Strip Python exception class prefix e.g. "litellm.BadRequestError: GroqException - ..."
+  const exMatch = raw.match(/(?:[\w.]+Error|Exception)[:\s-]+(.+)/s)
+  if (exMatch) {
+    // Take just first sentence / first 120 chars
+    const first = exMatch[1].replace(/[\n\r].*/s, '').trim().slice(0, 180)
+    return { title: first, detail: raw }
+  }
+
+  // Fallback: first 180 chars
+  return { title: raw.slice(0, 180) + (raw.length > 180 ? '…' : ''), detail: raw.length > 180 ? raw : null }
+}
+
+function ErrorBanner({ errorMessage }: { errorMessage: string | null }) {
+  const [showDetail, setShowDetail] = useState(false)
+  const { title, detail } = extractFriendlyError(errorMessage)
+
+  return (
+    <div className="failure-banner" role="alert">
+      <div className="failure-icon">✕</div>
+      <div className="failure-body">
+        <h3>Validation failed</h3>
+        <p className="failure-reason">{title}</p>
+        {detail && (
+          <button
+            className="failure-details-toggle"
+            onClick={() => setShowDetail(v => !v)}
+            aria-expanded={showDetail}
+          >
+            {showDetail ? '▲ Hide details' : '▼ Show technical details'}
+          </button>
+        )}
+        {showDetail && detail && (
+          <pre className="failure-detail-block">{detail}</pre>
+        )}
+        <Link to="/validate" className="retry-btn">Try a new idea →</Link>
+      </div>
+    </div>
+  )
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function RunPage() {
   const { runId } = useParams<{ runId: string }>()
   const navigate = useNavigate()
@@ -99,14 +153,7 @@ export default function RunPage() {
       )}
 
       {isFailed && (
-        <div className="failure-banner" role="alert">
-          <div className="failure-icon">✕</div>
-          <div>
-            <h3>Validation failed</h3>
-            <p>{runData?.error_message || 'An unexpected error occurred.'}</p>
-            <Link to="/validate" className="retry-btn">Try a new submission →</Link>
-          </div>
-        </div>
+        <ErrorBanner errorMessage={runData?.error_message ?? null} />
       )}
 
       <div className="tab-bar">

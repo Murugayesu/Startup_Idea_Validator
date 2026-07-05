@@ -47,20 +47,20 @@ def _parse_output(agent_output) -> tuple[str | None, str]:
     """
 
     # 1. TaskOutput (CrewAI >= 0.80) ─────────────────────────────────────────
-    if hasattr(agent_output, "raw") and isinstance(getattr(agent_output, "agent", None), str):
+    if hasattr(agent_output, "raw"):
         raw = (getattr(agent_output, "raw", "") or "").strip()
-        return (raw[:2000] if raw else None), "completed"
+        return (raw[:20000] if raw else None), "completed"
 
     # 2. AgentFinish via return_values dict ──────────────────────────────────
     if hasattr(agent_output, "return_values"):
         output = (agent_output.return_values.get("output") or "").strip()
-        return (output[:2000] if output else None), "completed"
+        return (output[:20000] if output else None), "completed"
 
     # 3. AgentFinish via log attribute ───────────────────────────────────────
     log_attr = getattr(agent_output, "log", None)
     if log_attr:
         text = str(log_attr).strip()
-        return (text[:2000] if text else None), "completed"
+        return (text[:20000] if text else None), "completed"
 
     # 4. AgentAction (single tool call) ──────────────────────────────────────
     if hasattr(agent_output, "tool"):
@@ -77,12 +77,12 @@ def _parse_output(agent_output) -> tuple[str | None, str]:
             tool_name = str(getattr(action, "tool", "unknown"))
             payload = json.dumps({"tool": tool_name, "input": str(observation)[:500]})
             return payload, "tool_call"
-        return str(first)[:2000], "step"
+        return str(first)[:20000], "step"
 
     # 6. Plain string ─────────────────────────────────────────────────────────
     if isinstance(agent_output, str):
         stripped = agent_output.strip()
-        return (stripped[:2000] if stripped else None), "step"
+        return (stripped[:20000] if stripped else None), "step"
 
     # 7. Fallback — strip "AgentFinish(thought='...', output='...')" repr wrappers
     raw = str(agent_output)
@@ -93,17 +93,17 @@ def _parse_output(agent_output) -> tuple[str | None, str]:
     )
     if match:
         cleaned = match.group(1).strip()
-        return (cleaned[:2000] if cleaned else None), "step"
+        return (cleaned[:20000] if cleaned else None), "step"
 
     stripped = raw.strip()
-    return (stripped[:2000] if stripped else None), "step"
+    return (stripped[:20000] if stripped else None), "step"
 
 
 # ---------------------------------------------------------------------------
 # Public callback factory
 # ---------------------------------------------------------------------------
 
-def make_step_callback(run_id: str, supabase_client):
+def make_step_callback(run_id: str, supabase_client, agent_name: str | None = None):
     """
     Returns a CrewAI-compatible step callback bound to a specific run_id.
     Callback failures are swallowed — they must never crash an agent run.
@@ -114,12 +114,16 @@ def make_step_callback(run_id: str, supabase_client):
             message, event_type = _parse_output(agent_output)
             if not message:
                 return  # Skip empty / noise events
+                
+            # Unescape newlines to fix markdown rendering in the UI
+            message = message.replace("\\n", "\n").replace("\\t", "\t")
 
-            agent_name = _extract_agent_name(agent_output)
+            # Use explicitly passed agent_name if available, else try to extract
+            final_agent_name = agent_name or _extract_agent_name(agent_output)
 
             supabase_client.table("run_events").insert({
                 "run_id": run_id,
-                "agent_name": agent_name,
+                "agent_name": final_agent_name,
                 "event_type": event_type,
                 "message": message,
                 "created_at": datetime.now(timezone.utc).isoformat(),

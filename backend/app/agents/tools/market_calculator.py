@@ -6,6 +6,7 @@ The agent supplies the inputs; this tool returns reproducible numbers.
 """
 
 import json
+from typing import Optional
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
@@ -23,7 +24,7 @@ class MarketCalculatorInput(BaseModel):
     avg_revenue_per_user: float = Field(
         description="Average annual revenue per user/customer in USD"
     )
-    currency: str = Field(default="USD", description="Currency label for output")
+    currency: Optional[str] = Field(default="USD", description="Currency label for output (optional, defaults to USD)")
 
 
 class MarketCalculatorTool(BaseTool):
@@ -31,7 +32,7 @@ class MarketCalculatorTool(BaseTool):
     description: str = (
         "Calculates TAM, SAM, and SOM from market inputs. "
         "Use this tool to produce reproducible market-size numbers after gathering data with web search. "
-        "Inputs: population, addressable_pct (0-100), obtainable_pct (0-100), avg_revenue_per_user."
+        "Required inputs: population, addressable_pct (0-100), obtainable_pct (0-100), avg_revenue_per_user."
     )
     args_schema: type[BaseModel] = MarketCalculatorInput
 
@@ -43,6 +44,7 @@ class MarketCalculatorTool(BaseTool):
         avg_revenue_per_user: float,
         currency: str = "USD",
     ) -> str:
+        currency = currency or "USD"  # guard against None when Optional field omitted
         if not (0 < addressable_pct <= 100):
             return "Error: addressable_pct must be between 0 and 100."
         if not (0 < obtainable_pct <= 100):

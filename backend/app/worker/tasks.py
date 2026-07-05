@@ -46,11 +46,19 @@ def run_validation_task(self, run_id: str, startup_idea: str, user_id: str) -> d
         _write_event(None, "started", f"Validation started for: {startup_idea[:200]}")
         logger.info(f"[run={run_id}] Starting validation for user={user_id}")
 
-        # --- Build step callback bound to this run ---
-        step_cb = make_step_callback(run_id, db)
+        # --- Build step callback factory bound to this run ---
+        def make_bound_callback(agent_name: str):
+            return make_step_callback(run_id, db, agent_name)
+
+        # Emit the first agent's started event manually so the UI knows it's active immediately
+        _write_event("Market Research Analyst", "started", "Market Research Analyst starting...")
 
         # --- Run the crew ---
-        crew = build_crew(startup_idea=startup_idea, step_callback=step_cb)
+        crew = build_crew(
+            startup_idea=startup_idea,
+            make_step_callback_fn=make_bound_callback,
+            emit_event_fn=_write_event,
+        )
         result = crew.kickoff()
 
         # --- Extract report and score ---
