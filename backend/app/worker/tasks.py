@@ -81,8 +81,8 @@ def run_validation_task(self, run_id: str, startup_idea: str, user_id: str) -> d
         return {"run_id": run_id, "status": "complete", "score": validation_score}
 
     except Exception as exc:
-        error_msg = str(exc)[:1000]
-        logger.error(f"[run={run_id}] FAILED: {error_msg}", exc_info=True)
+        error_msg = str(exc)
+        logger.error(f"[run={run_id}] FAILED: {error_msg[:1000]}", exc_info=True)
         try:
             _update_run("failed", error_message=error_msg, completed_at=datetime.now(timezone.utc).isoformat())
             _write_event(None, "error", f"Run failed: {error_msg}")

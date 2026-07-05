@@ -146,6 +146,7 @@
 /* ── Event card ───────────────────────────────────────────────── */
 .event-card {
   display: flex;
+  flex-shrink: 0;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--bg-card);
