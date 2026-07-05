@@ -131,7 +131,7 @@ export default function RunPage() {
 
       <div className="tab-content">
         {activeTab === 'progress' && (
-          <AgentProgressFeed events={events} isRunning={isRunning} isLoading={isLoading} />
+          <AgentProgressFeed events={events} isRunning={isRunning} isLoading={isLoading} status={status} />
         )}
         {activeTab === 'report' && isComplete && runData?.report_markdown && (
           <ReportViewer
