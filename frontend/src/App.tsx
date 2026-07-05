@@ -56,9 +56,13 @@ function NavBar() {
         {user ? (
           <>
             <img
-              src={user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${user.email}`}
+              src={user.user_metadata?.avatar_url || `https://api.dicebear.com/9.x/initials/svg?seed=${user.email}`}
               alt="avatar"
               className="user-avatar"
+              onError={(e) => {
+                // If the OAuth avatar fails to load (e.g., expired link), fallback to DiceBear initials
+                e.currentTarget.src = `https://api.dicebear.com/9.x/initials/svg?seed=${user.email}`
+              }}
             />
             <button className="signout-btn" onClick={handleSignOut} id="signout-btn">Sign out</button>
           </>
