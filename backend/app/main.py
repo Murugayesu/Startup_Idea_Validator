@@ -6,7 +6,7 @@ from app.api.routes import router
 settings = get_settings()
 
 app = FastAPI(
-    title="Startup Idea Validator API",
+    title="FlashValidator API",
     description="Multi-agent AI validation pipeline for startup ideas",
     version="1.0.0",
     docs_url="/docs",

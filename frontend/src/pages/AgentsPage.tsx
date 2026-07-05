@@ -5,7 +5,7 @@ export default function AgentsPage() {
     <div className="info-container">
       <div className="info-header">
         <h1>AI Agents Architecture</h1>
-        <p>Startup Idea Validator is powered by a multi-agent system. Four specialized agents work in a sequential pipeline to evaluate your idea.</p>
+        <p>FlashValidator is powered by a multi-agent system. Four specialized agents work in a sequential pipeline to evaluate your idea.</p>
       </div>
 
       <div className="agent-list">

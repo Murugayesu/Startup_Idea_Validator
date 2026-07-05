@@ -30,8 +30,7 @@ function NavBar() {
   return (
     <nav className="navbar">
       <div className="navbar-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-        <span className="nav-logo">⚡</span>
-        <span className="nav-name">IdeaValidator</span>
+        <img src="/full_logo.png" alt="FlashValidator" className="nav-logo-img" />
       </div>
       <div className="navbar-links">
         <NavLink to="/validate" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'} id="nav-validate">

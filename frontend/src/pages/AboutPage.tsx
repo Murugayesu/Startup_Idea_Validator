@@ -5,7 +5,7 @@ export default function AboutPage() {
     <div className="info-container">
       <div className="info-header">
         <h1>About the Project</h1>
-        <p>Startup Idea Validator is an open-source demonstration of a production-grade asynchronous AI architecture.</p>
+        <p>FlashValidator is an open-source demonstration of a production-grade asynchronous AI architecture.</p>
       </div>
 
       <div className="about-content">
@@ -39,7 +39,7 @@ export default function AboutPage() {
             <p className="author-title">Full stack AI Product Engineer</p>
             
             <p className="author-bio">
-              I built Startup Idea Validator to solve a real problem: aspiring founders often rely on gut feeling instead of rigorous validation. 
+              I built FlashValidator to solve a real problem: aspiring founders often rely on gut feeling instead of rigorous validation. 
               My goal was to create a tool that provides honest, data-backed decisions in minutes while demonstrating best practices for building 
               scalable AI SaaS products.
             </p>

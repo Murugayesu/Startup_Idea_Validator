@@ -62,10 +62,8 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <span className="logo-icon">⚡</span>
+          <img src="/full_logo.png" alt="FlashValidator" className="login-logo-img" />
         </div>
-
-        <h1>Startup Idea Validator</h1>
         <p className="login-tagline">
           AI research crew. Real web data. Honest scores.
           <br />
