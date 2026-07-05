@@ -7,14 +7,61 @@ CrewAI Validation Crew
   3. Business Strategist — SWOT (informed by market research)
   4. Report Compiler    — synthesis + honest 1–10 score
 
-All agents use Groq llama-3.3-70b-versatile (free tier).
+All agents use Groq llama-3.1-8b-instant (free tier, 20k TPM).
 """
 
 from crewai import Agent, Task, Crew, Process, LLM
+import litellm
+from tenacity import (
+    retry,
+    wait_fixed,
+    stop_after_attempt,
+    retry_if_exception_type,
+)
 from app.agents.tools.market_calculator import MarketCalculatorTool
 from app.agents.tools.web_search import WebSearchTool
 from app.agents.tools.swot_analyzer import SwotAnalyzerTool
 from app.core.config import get_settings
+
+# -----------------------------------------------------------------------
+# Groq compatibility + rate-limit patch
+# -----------------------------------------------------------------------
+# Problem 1: CrewAI >=0.80 injects Anthropic-specific 'cache_breakpoint': True
+# (a raw bool) into system messages for ALL providers. Groq rejects it.
+# litellm.drop_params=True made it worse — its code calls .get() on True.
+# Fix: strip offending fields before litellm ever sees them.
+#
+# Problem 2: Groq free tier is 12,000 TPM. With 4 agents + context passing
+# a single run easily exceeds this mid-run.
+# Fix: retry on RateLimitError with a 25s fixed wait (error says ~17s).
+# -----------------------------------------------------------------------
+_original_litellm_completion = litellm.completion
+
+
+@retry(
+    retry=retry_if_exception_type(litellm.RateLimitError),
+    wait=wait_fixed(25),        # Groq tells us to wait ~17 s; 25 s gives margin
+    stop=stop_after_attempt(4), # Max ~100 s of total wait before giving up
+    reraise=True,               # Propagate the exception if all retries fail
+)
+def _groq_safe_completion(*args, **kwargs):
+    """Strip Anthropic cache params and auto-retry on Groq TPM rate limits."""
+    model = kwargs.get("model", "")
+    if "anthropic" not in model and "claude" not in model:
+        for msg in kwargs.get("messages", []):
+            if not isinstance(msg, dict):
+                continue
+            msg.pop("cache_breakpoint", None)  # bool — Groq rejects this
+            content = msg.get("content")
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict):
+                        block.pop("cache_control", None)   # Anthropic-only
+                        block.pop("cache_breakpoint", None)
+    return _original_litellm_completion(*args, **kwargs)
+
+
+litellm.completion = _groq_safe_completion
 
 
 def build_crew(startup_idea: str, step_callback=None) -> Crew:
@@ -24,11 +71,13 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
     # LLM — Groq free tier
     # ------------------------------------------------------------------
     groq_llm = LLM(
-        model="groq/llama-3.3-70b-versatile",
+        model="groq/llama-3.1-8b-instant",   # 20k TPM free tier vs 12k for 70b
         api_key=settings.groq_api_key,
         temperature=0.3,      # Lower temp for more factual, consistent output
-        max_tokens=4096,
+        max_tokens=2048,      # Stays comfortably within free-tier TPM budget
     )
+
+
 
     # ------------------------------------------------------------------
     # Tools
@@ -56,7 +105,7 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
         tools=[web_search, market_calc],
         verbose=True,
         allow_delegation=False,
-        max_iter=5,
+        max_iter=4,             # Reduced from 5 to cap token budget
     )
 
     tech_analyst = Agent(
@@ -75,7 +124,7 @@ def build_crew(startup_idea: str, step_callback=None) -> Crew:
         tools=[web_search],
         verbose=True,
         allow_delegation=False,
-        max_iter=4,
+        max_iter=3,             # Reduced from 4 to cap token budget
     )
 
     business_strategist = Agent(

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export interface RunEvent {
@@ -22,6 +22,7 @@ export function useRunEvents(runId: string | null): UseRunEventsReturn {
   const [events, setEvents] = useState<RunEvent[]>([])
   const [status, setStatus] = useState<RunStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const lastUpdateRef = useRef<number>(Date.now())
 
   const fetchInitialData = useCallback(async () => {
     if (!runId) return
@@ -43,9 +44,27 @@ export function useRunEvents(runId: string | null): UseRunEventsReturn {
       .eq('id', runId)
       .single()
 
-    if (runData) setStatus(runData.status as RunStatus)
+    if (runData) {
+      setStatus(runData.status as RunStatus)
+      lastUpdateRef.current = Date.now()
+    }
     setIsLoading(false)
   }, [runId])
+
+  // Silent poll — does NOT set isLoading so the UI doesn't flash
+  const pollStatus = useCallback(async () => {
+    if (!runId) return
+    const [{ data: runData }, { data: eventsData }] = await Promise.all([
+      supabase.from('validation_runs').select('status').eq('id', runId).single(),
+      supabase.from('run_events').select('*').eq('run_id', runId).order('created_at', { ascending: true }),
+    ])
+    if (runData?.status) {
+      setStatus(runData.status as RunStatus)
+      lastUpdateRef.current = Date.now()
+    }
+    if (eventsData) setEvents(eventsData)
+  }, [runId])
+
 
   useEffect(() => {
     if (!runId) return
@@ -65,6 +84,7 @@ export function useRunEvents(runId: string | null): UseRunEventsReturn {
         },
         (payload) => {
           setEvents((prev) => [...prev, payload.new as RunEvent])
+          lastUpdateRef.current = Date.now()
         }
       )
       .subscribe()
@@ -83,16 +103,28 @@ export function useRunEvents(runId: string | null): UseRunEventsReturn {
         (payload) => {
           if (payload.new?.status) {
             setStatus(payload.new.status as RunStatus)
+            lastUpdateRef.current = Date.now()
           }
         }
       )
       .subscribe()
 
+    // Polling fallback — kicks in if no Realtime update received in >5 s
+    const interval = setInterval(() => {
+      if (
+        (status === 'pending' || status === 'running') &&
+        Date.now() - lastUpdateRef.current > 5000
+      ) {
+        pollStatus()
+      }
+    }, 5000)
+
     return () => {
       supabase.removeChannel(eventsChannel)
       supabase.removeChannel(runChannel)
+      clearInterval(interval)
     }
-  }, [runId, fetchInitialData])
+  }, [runId, fetchInitialData, pollStatus, status])
 
   return { events, status, isLoading }
 }
