@@ -22,9 +22,9 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # ---------------------------------------------------------------
-# CMD is intentionally omitted here.
-# Railway overrides the start command per service:
-#   API service:    uvicorn app.main:app --host 0.0.0.0 --port $PORT
-#   Worker service: celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
+# Default command (Runs the API)
+# For the Celery worker, override the command in Render's "Docker Command" field with:
+# celery -A app.worker.celery_app worker --loglevel=info --concurrency=2
 # ---------------------------------------------------------------
 EXPOSE 8000
+CMD sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
